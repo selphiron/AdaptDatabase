@@ -6,11 +6,10 @@
 package adaptdatabase.main;
 
 import adaptdatabase.entities.*;
-import com.sun.media.jfxmedia.logging.Logger;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.logging.log4j.LogManager;
 /**
  *
  * @author AlbertSanchez
@@ -18,41 +17,47 @@ import java.util.List;
 public class AdaptDatabase {
 
     // Input and output dataset folder (The path must be finished with a slash '/')
-    private static final String inputDatasetPath = Paths.get("").toAbsolutePath().toString() + "/test/TestDS/";
-    //private static final String inputDatasetPath = "/Users/AlbertSanchez/Dropbox/TFM/Dataset/";
-    private static final String outputDatasetPath = "";
+    private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
+    //private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Dropbox/TFM/Dataset/";
+    private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/";
     
     // Excel Extraction
-    private static final boolean EXTRACTION = true;
+    private static final boolean EXTRACTION = false;
     
     // Include Incidents with user TAG
-    private static final boolean userTAG = false;
+    private static final boolean USERTAG = false;
     
     // Minimum number of readings in 3 seconds (2 GPS Coordinates)
-    private static final int minNumberOfReadings = 15;
+    private static final int MINNUMBEROFREADINGS = 15;
     
     // Samples Target between 2 GPS Coordinates (Mean between 988 rides = 22.80)
-    private static final int sampleTarget = 24;
+    private static final int SAMPLETARGET = 24;
 
     // Windowing
-    private static final int windowFrame = 6000; //ms
-    private static final int windowShift = 3000; //ms
+    private static final int WINDOWFRAME = 6000; //ms
+    private static final int WINDOWSHIFT = 3000; //ms
             
+    // Logging
+    static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
+    
     public static void main(String[] args) {
          
-        Utils u = new Utils(inputDatasetPath,outputDatasetPath, EXTRACTION, userTAG, minNumberOfReadings, sampleTarget, windowFrame, windowShift);
+        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT);
                 
-        System.out.println(inputDatasetPath);
+        System.out.println(INPUTDATASETPATH);
         System.out.println("Begining the Data Extraction");
+        logger.info("Starting data extraction");
         System.out.println("...");
-        System.out.println("Searching files in " + inputDatasetPath + " ...");
+        System.out.println("Searching files in " + INPUTDATASETPATH + " ...");
+        logger.info("Dataset path: " + INPUTDATASETPATH);
+
         
         // Get all the incidents
         List<Incident> incidents = new ArrayList<>();
         incidents = u.getSimraIncidents();
         
         System.out.println("Files readed. " + incidents.size() + " incidents found");
-        
+
         // Get rides
         List<Ride> rides = new ArrayList<>(); 
         try
@@ -61,7 +66,7 @@ public class AdaptDatabase {
         }
         catch (Exception e)
         {
-            Logger.logMsg(Logger.WARNING, e.getMessage());
+            //Logger.logMsg(Logger.WARNING, e.getMessage());
         }
         
         System.out.println("Rides readed: " + rides.size());
@@ -85,8 +90,24 @@ public class AdaptDatabase {
         
         System.out.println("NN Dataset Generated! - NNDataset Size: " + nndataset.size());
 
-        // Find ride part in incidents
-        
+        // Generate excel
+        if (EXTRACTION)
+        {
+            String filepath = "";
+            try
+            {
+                //filepath = u.writeXLSNNDataset(OUTPUTDATASETPATH, nndataset);
+                //System.out.println("Excel Generated! - NNDataset excel path: " + filepath);
+                filepath = u.writeCSVFile(OUTPUTDATASETPATH, nndataset);
+                System.out.println("CSV Generated! - NNDataset csv path: " + filepath);
+
+            }
+            catch(Exception e)
+            {
+                logger.error(e.getMessage());            
+            }
+        }
+            
     }
     
     

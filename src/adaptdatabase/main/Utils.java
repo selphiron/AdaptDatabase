@@ -6,32 +6,40 @@
 package adaptdatabase.main;
 
 import adaptdatabase.entities.*;
-import com.sun.media.jfxmedia.logging.Logger;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.jtransforms.fft.*;
+import org.apache.logging.log4j.LogManager; //Logging
+import org.jtransforms.fft.*; //FFT
+import org.apache.poi.ss.usermodel.*; //Excel Export
+import org.apache.poi.ss.util.*; //Excel Export
+import org.apache.poi.hssf.usermodel.*; //Excel Export
 
 /**
  *
  * @author AlbertSanchez
  */
 public class Utils {
+    
+    static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(Utils.class);
 
-    private final String  inputDatasetPath;
-    private final String  outputDatasetPath;
+    private final String  INPUTDATASETPATH;
+    private final String  OUTPUTDATASETPATH;
     private final boolean EXTRACTION;
-    private final boolean userTAG;
-    private final int     minNumberOfReadings;
-    private final int     sampleTarget;
-    private final int     windowFrame;
-    private final int     windowShift;
+    private final boolean USERTAG;
+    private final int     MINNUMBEROFREADINGS;
+    private final int     SAMPLETARGET;
+    private final int     WINDOWFRAME;
+    private final int     WINDOWSHIFT;
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -42,18 +50,18 @@ public class Utils {
     double[] fftDataZ;
 
     
-    public Utils(String inputDatasetPath, String outputDatasetPath, boolean EXTRACTION, 
-            boolean userTAG, int minNumberOfReadings, int sampleTarget, int windowFrame,
-            int windowShift)
+    public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, 
+            boolean USERTAG, int MINNUMBEROFREADINGS, int SAMPLETARGET, int WINDOWFRAME,
+            int WINDOWSHIFT)
     {
-        this.inputDatasetPath = inputDatasetPath;
-        this.outputDatasetPath = outputDatasetPath;
+        this.INPUTDATASETPATH = INPUTDATASETPATH;
+        this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
         this.EXTRACTION = EXTRACTION;
-        this.userTAG = userTAG;
-        this.minNumberOfReadings = minNumberOfReadings;
-        this.sampleTarget = sampleTarget;
-        this.windowFrame = windowFrame;
-        this.windowShift = windowShift;
+        this.USERTAG = USERTAG;
+        this.MINNUMBEROFREADINGS = MINNUMBEROFREADINGS;
+        this.SAMPLETARGET = SAMPLETARGET;
+        this.WINDOWFRAME = WINDOWFRAME;
+        this.WINDOWSHIFT = WINDOWSHIFT;
     }
     
     public List<Incident> getSimraIncidents()
@@ -63,9 +71,16 @@ public class Utils {
         fileNames = getFileNames();
         
         if (fileNames.isEmpty())
+        {
             System.out.println("0 files founded");
+            logger.warn("0 files found in the dataset path");
+        }
         else
+        {
             System.out.println(fileNames.size() + " files found");
+            logger.info(fileNames.size() + " files found in the dataset");
+        }
+        
         
         System.out.println("Reading files...");
                 
@@ -78,7 +93,7 @@ public class Utils {
             }
             catch (Exception e)
             {
-                Logger.logMsg(Logger.WARNING, e.getMessage());
+                logger.error(e.getStackTrace().toString());
             }
         }
         
@@ -94,13 +109,13 @@ public class Utils {
     public List<String> getFileNames()
     {
         List<String> results = new ArrayList<>();
-        File[] files = new File(inputDatasetPath).listFiles();
+        File[] files = new File(INPUTDATASETPATH).listFiles();
 
         for (File file : files) 
         {
             if (file.isFile()) 
                 if(!file.getName().startsWith("."))
-                    results.add(inputDatasetPath + file.getName());
+                    results.add(INPUTDATASETPATH + file.getName());
         }
         return results;
     }
@@ -196,8 +211,8 @@ public class Utils {
                 incident.setI10(false);
 
             
-            // Include userTAG incidents
-            if(userTAG)
+            // Include USERTAG incidents
+            if(USERTAG)
             {
                 if (incident.getIncident() != 0)
                     incidents.add(incident);
@@ -218,6 +233,7 @@ public class Utils {
     {
         List<Ride> rides = new ArrayList<>();
         Ride ride;
+        int numberOfRides = 0;
         
         List<Double> latitude, longitude, 
                      tmp_latitude, tmp_longitude;
@@ -263,7 +279,7 @@ public class Utils {
             tmp_gyr_b = new ArrayList<>();
             tmp_gyr_c = new ArrayList<>();
             
-            FileReader r = new FileReader(inputDatasetPath + f);
+            FileReader r = new FileReader(INPUTDATASETPATH + f);
             BufferedReader br = new BufferedReader(r);
             
             // Read until header of the ride data
@@ -299,7 +315,7 @@ public class Utils {
                 else
                 {
                     // If the number of readings is sufficient we save it
-                    if (readings >= minNumberOfReadings)
+                    if (readings >= MINNUMBEROFREADINGS)
                     {
                         latitude.addAll(tmp_latitude);
                         longitude.addAll(tmp_longitude);
@@ -378,7 +394,7 @@ public class Utils {
                 // Read next line
                 line = br.readLine();
                 
-                if (line == null && readings >= minNumberOfReadings)
+                if (line == null && readings >= MINNUMBEROFREADINGS)
                 {
                     latitude.addAll(tmp_latitude);
                     longitude.addAll(tmp_longitude);
@@ -431,10 +447,12 @@ public class Utils {
                 ride.getGyr_c() != null)
             {
                 rides.add(ride);
-                System.out.println("Ride added from file: " + f);
+                //System.out.println("Ride added from file: " + f);
+                numberOfRides++;
+                if(numberOfRides%100==0) System.out.println(numberOfRides + " rides readed");
+                    
             }    
         }
-        
         return rides;
         
     }
@@ -450,6 +468,7 @@ public class Utils {
         Long t1 = 0l, dt = 0l, iTs = 0l;
         boolean nextStartSet;
         int bikeType = 0, phoneLocation = 0, incidentType = 0;
+        int numberOfWindowedRides = 0;
           
         for (Ride r : rides)
         {
@@ -468,17 +487,17 @@ public class Utils {
             for (int j=1; j < timestamps.length; j++)
             {
                 dt = timestamps[j] - t1;
-                if (dt >= windowShift && !nextStartSet && j != timestamps.length - 1)
+                if (dt >= WINDOWSHIFT && !nextStartSet && j != timestamps.length - 1)
                 {
                     initIndexes.add(j);
                     i = j;
                     nextStartSet = true;
                 }
-                if (dt >= windowFrame)
+                if (dt >= WINDOWFRAME)
                 {
                     endIndexes.add(j);
                     t1 = timestamps[i];
-                    if (timestamps[timestamps.length -1] - t1 > windowFrame)
+                    if (timestamps[timestamps.length -1] - t1 > WINDOWFRAME)
                         j = i;
                     else
                         j = timestamps.length - 1;
@@ -546,6 +565,8 @@ public class Utils {
                 ride.setGyr_c(r.getGyr_c().subList(ii, ei));
                 
                 windowedRides.add(ride);
+                numberOfWindowedRides++;
+                if(numberOfWindowedRides%1000==0) System.out.println(numberOfWindowedRides + " windowed rides");
             }
         }
         
@@ -558,9 +579,7 @@ public class Utils {
         List<NNDataset> nnDatasetList = new ArrayList<>();
         NNDataset nnDataset;
         long t0 = 0l, t1 = 0l, d = 0l;
-        FFT f = new FFT();
-        List<Double> svm = new ArrayList<>();
-        double[] dA;
+        int numberOfNNDataset = 0;
         
         for (WindowedRide ride : rides)
         {
@@ -592,6 +611,9 @@ public class Utils {
             nnDataset.setIncident_type(ride.getIncident());
             
             nnDatasetList.add(nnDataset);
+            numberOfNNDataset++;
+            if(numberOfNNDataset%1000==0) System.out.println(numberOfNNDataset + " NNDataset records added");
+
         }
         
         System.out.println("FFT elapsed time: " + d/100000 + "ms.");
@@ -812,4 +834,150 @@ public class Utils {
         
     }
 
+    public String writeXLSNNDataset(String path, List<NNDataset> nnDataset) throws IOException
+    {
+        Date date = new Date(System.currentTimeMillis());
+        String filename = path + String.valueOf(date.toInstant().toEpochMilli()) + ".xls";
+        int xlsRecords = 0;
+        
+        HSSFWorkbook wb = new HSSFWorkbook();
+        
+   
+        HSSFSheet s = wb.createSheet("NNDataset");
+
+        // Create heading
+        Row heading = s.createRow(0);
+        heading.createCell(0).setCellValue("speed");
+        heading.createCell(1).setCellValue("mean_acc_x");
+        heading.createCell(2).setCellValue("mean_acc_y");
+        heading.createCell(3).setCellValue("mean_acc_z");
+        heading.createCell(4).setCellValue("std_acc_x");
+        heading.createCell(5).setCellValue("std_acc_y");
+        heading.createCell(6).setCellValue("std_acc_z");
+        heading.createCell(7).setCellValue("sma");
+        heading.createCell(8).setCellValue("mean_svm");
+        heading.createCell(9).setCellValue("entropyX");
+        heading.createCell(10).setCellValue("entropyY");
+        heading.createCell(11).setCellValue("entropyZ");
+        heading.createCell(12).setCellValue("bike_type");
+        heading.createCell(13).setCellValue("phone_location");
+        heading.createCell(14).setCellValue("incident_type");
+
+        // Adding Data
+        int r = 0;
+        for (NNDataset line : nnDataset) 
+        {
+            r++;
+            Row row = s.createRow(r);
+            // speed
+            Cell cellSpeed = row.createCell(0);
+            cellSpeed.setCellValue(line.getSpeed());
+            // mean_acc_x
+            Cell cellMeanAccX = row.createCell(1);
+            cellMeanAccX.setCellValue(line.getMean_acc_x());
+            // mean_acc_y
+            Cell cellMeanAccY = row.createCell(2);
+            cellMeanAccY.setCellValue(line.getMean_acc_y());
+            // mean_acc_z
+            Cell cellMeanAccZ = row.createCell(3);
+            cellMeanAccZ.setCellValue(line.getMean_acc_z());
+            // std_acc_x
+            Cell cellStdAccX = row.createCell(4);
+            cellStdAccX.setCellValue(line.getStd_acc_x());                                        
+            // std_acc_y
+            Cell cellStdAccY = row.createCell(5);
+            cellStdAccY.setCellValue(line.getStd_acc_y());
+            // std_acc_z
+            Cell cellStdAccZ = row.createCell(6);
+            cellStdAccZ.setCellValue(line.getStd_acc_z());
+            // SMA
+            Cell cellSma = row.createCell(7);
+            cellSma.setCellValue(line.getSma());
+            // mean_svm
+            Cell cellMeanSvm = row.createCell(8);
+            cellMeanSvm.setCellValue(line.getMean_svm());
+            // EntropyX
+            Cell cellEntropyX = row.createCell(9);
+            cellEntropyX.setCellValue(line.getEntropyX());
+            // EntropyY
+            Cell cellEntropyY = row.createCell(10);
+            cellEntropyY.setCellValue(line.getEntropyY());
+            // EntropyZ
+            Cell cellEntropyZ = row.createCell(11);
+            cellEntropyZ.setCellValue(line.getEntropyZ());
+            // bikeType
+            Cell cellBikeType = row.createCell(12);
+            cellBikeType.setCellValue(line.getBike_type());
+            // PhoneLocation
+            Cell cellPhoneLocation = row.createCell(13);
+            cellPhoneLocation.setCellValue(line.getPhone_location());
+            // incident_type
+            Cell cellIncidentType = row.createCell(14);
+            cellIncidentType.setCellValue(line.getIncident_type());
+                        
+            if(r%1000==0) System.out.println(r + " xls records added");
+
+        }
+
+        //Filter
+        s.setAutoFilter(new CellRangeAddress(0, 0, 0, 14));
+        s.createFreezePane(0, 1);
+
+        //Autofit
+        for(int k=0; k<=14; k++)
+            s.autoSizeColumn(k);        
+        
+        
+        // Save file
+        FileOutputStream out = new FileOutputStream(filename);
+        wb.write(out);
+        out.close();
+        wb.close();
+        
+        return filename;
+
+    }
+    
+    public String writeCSVFile(String path, List<NNDataset> nnDataset) throws IOException
+    {
+        Date date = new Date(System.currentTimeMillis());
+        String filename = path + String.valueOf(date.toInstant().toEpochMilli()) + ".csv";
+        String line = "";
+        int csvRecords = 0;
+        
+        FileWriter writer = new FileWriter(filename);
+        
+        line = "speed,mean_acc_x,mean_acc_y,mean_acc_z,std_acc_x,std_acc_y,std_acc_z,sma,mean_svm,entropyX,entropyY,entropyZ,bike_type,phone_location,incident_type\n";
+        writer.append(line);
+        
+        for(NNDataset l : nnDataset)
+        {
+            line  = l.getSpeed() + ",";
+            line += l.getMean_acc_x() + ",";
+            line += l.getMean_acc_y() + ",";
+            line += l.getMean_acc_z() + ",";
+            line += l.getStd_acc_x() + ",";
+            line += l.getStd_acc_y() + ",";
+            line += l.getStd_acc_z() + ",";
+            line += l.getSma() + ",";
+            line += l.getMean_svm() + ",";
+            line += l.getEntropyX() + ",";
+            line += l.getEntropyY() + ",";
+            line += l.getEntropyZ() + ",";
+            line += l.getBike_type()  + ",";
+            line += l.getPhone_location() + ",";
+            line += l.getIncident_type() + "\n";
+            writer.append(line);
+            
+            csvRecords++;
+            
+            if(csvRecords%1000==0) System.out.println(csvRecords + " csv records added");
+            
+        }
+        
+        writer.flush();
+        writer.close();
+        
+        return filename;
+    }
 }
