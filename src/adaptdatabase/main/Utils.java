@@ -945,16 +945,45 @@ public class Utils {
     public String writeCSVFile(String path, List<NNDataset> nnDataset) throws IOException
     {
         Date date = new Date(System.currentTimeMillis());
-        String filename = path + String.valueOf(date.toInstant().toEpochMilli()) + ".csv";
+        String filename = path + "dataset.csv";
         String line = "";
-        int csvRecords = 0;
+        String[] s, s1;
+        int csvRecords = 0, maxFile=0;
+        boolean dsFile = false;
+        
+        // To ensure any file is overwrited
+        File f = new File(path);
+        String[] files = f.list();
+        for(int i=0; i < files.length; i++)
+        {
+            if(new File(path + files[i]).isFile())
+            {
+                s = files[i].split("dataset"); 
+                if(s.length==2)
+                {
+                    if(s[1].equals(".csv"))
+                        dsFile = true;
+                    else
+                    {
+                        s1 = s[1].split(".csv");
+                        if(Integer.valueOf(s1[0]) > maxFile)
+                            maxFile = Integer.valueOf(s1[0])+1;            
+                    }
+                } 
+            }
+        }
+        
+        if (dsFile)
+            new File(filename).renameTo(new File(path+"dataset" + maxFile + ".csv"));
+
+        
         nnDataset = nnDataset.subList(0, Math.round(nnDataset.size()*USEDDATASET/100));
         int trainingSamples = Math.round(nnDataset.size()*TRAININGDATASET/100);
                 
         FileWriter writer = new FileWriter(filename);
         
-        line = "speed,mean_acc_x,mean_acc_y,mean_acc_z,std_acc_x,std_acc_y,std_acc_z,sma,mean_svm,entropyX,entropyY,entropyZ,bike_type,phone_location,incident_type\n";
-        writer.append(line);
+        //line = "speed,mean_acc_x,mean_acc_y,mean_acc_z,std_acc_x,std_acc_y,std_acc_z,sma,mean_svm,entropyX,entropyY,entropyZ,bike_type,phone_location,incident_type\n";
+        //writer.append(line);
         
         for(NNDataset l : nnDataset)
         {

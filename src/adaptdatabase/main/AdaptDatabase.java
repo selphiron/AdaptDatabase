@@ -17,9 +17,9 @@ import org.apache.logging.log4j.LogManager;
 public class AdaptDatabase {
 
     // Input and output dataset folder (The path must be finished with a slash '/')
-    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
-    private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
-    private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/";
+    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/TestDS/";
+    private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/files20200128/";
+    private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
     
     // Excel Extraction
     private static final boolean EXTRACTION = true;
