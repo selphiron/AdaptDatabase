@@ -17,12 +17,12 @@ import org.apache.logging.log4j.LogManager;
 public class AdaptDatabase {
 
     // Input and output dataset folder (The path must be finished with a slash '/')
-    private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
-    //private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Dropbox/TFM/Dataset/";
+    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
+    private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
     private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/";
     
     // Excel Extraction
-    private static final boolean EXTRACTION = false;
+    private static final boolean EXTRACTION = true;
     
     // Include Incidents with user TAG
     private static final boolean USERTAG = false;
@@ -36,13 +36,17 @@ public class AdaptDatabase {
     // Windowing
     private static final int WINDOWFRAME = 6000; //ms
     private static final int WINDOWSHIFT = 3000; //ms
+    
+    // Dataset usage
+    private static final int TRAININGDATASET = 100; //%
+    private static final int USEDDATASET = 100; //%
             
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
     
     public static void main(String[] args) {
          
-        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT);
+        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT, TRAININGDATASET, USEDDATASET);
                 
         System.out.println(INPUTDATASETPATH);
         System.out.println("Begining the Data Extraction");
@@ -98,7 +102,7 @@ public class AdaptDatabase {
             {
                 //filepath = u.writeXLSNNDataset(OUTPUTDATASETPATH, nndataset);
                 //System.out.println("Excel Generated! - NNDataset excel path: " + filepath);
-                filepath = u.writeCSVFile(OUTPUTDATASETPATH, nndataset);
+                filepath = u.writeCSVFile(OUTPUTDATASETPATH, u.filterCategories(nndataset));
                 System.out.println("CSV Generated! - NNDataset csv path: " + filepath);
 
             }

@@ -40,6 +40,8 @@ public class Utils {
     private final int     SAMPLETARGET;
     private final int     WINDOWFRAME;
     private final int     WINDOWSHIFT;
+    private final int     TRAININGDATASET;
+    private final int     USEDDATASET;
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -52,7 +54,7 @@ public class Utils {
     
     public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, 
             boolean USERTAG, int MINNUMBEROFREADINGS, int SAMPLETARGET, int WINDOWFRAME,
-            int WINDOWSHIFT)
+            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET)
     {
         this.INPUTDATASETPATH = INPUTDATASETPATH;
         this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
@@ -62,6 +64,8 @@ public class Utils {
         this.SAMPLETARGET = SAMPLETARGET;
         this.WINDOWFRAME = WINDOWFRAME;
         this.WINDOWSHIFT = WINDOWSHIFT;
+        this.TRAININGDATASET = TRAININGDATASET;
+        this.USEDDATASET = USEDDATASET;
     }
     
     public List<Incident> getSimraIncidents()
@@ -114,7 +118,7 @@ public class Utils {
         for (File file : files) 
         {
             if (file.isFile()) 
-                if(!file.getName().startsWith("."))
+                if(!file.getName().startsWith(".") && file.getName().startsWith("VM"))
                     results.add(INPUTDATASETPATH + file.getName());
         }
         return results;
@@ -944,7 +948,9 @@ public class Utils {
         String filename = path + String.valueOf(date.toInstant().toEpochMilli()) + ".csv";
         String line = "";
         int csvRecords = 0;
-        
+        nnDataset = nnDataset.subList(0, Math.round(nnDataset.size()*USEDDATASET/100));
+        int trainingSamples = Math.round(nnDataset.size()*TRAININGDATASET/100);
+                
         FileWriter writer = new FileWriter(filename);
         
         line = "speed,mean_acc_x,mean_acc_y,mean_acc_z,std_acc_x,std_acc_y,std_acc_z,sma,mean_svm,entropyX,entropyY,entropyZ,bike_type,phone_location,incident_type\n";
@@ -966,7 +972,11 @@ public class Utils {
             line += l.getEntropyZ() + ",";
             line += l.getBike_type()  + ",";
             line += l.getPhone_location() + ",";
-            line += l.getIncident_type() + "\n";
+            if (csvRecords < trainingSamples)
+                line += l.getIncident_type() + "\n";
+            else
+                line += "0\n";
+
             writer.append(line);
             
             csvRecords++;
@@ -979,5 +989,40 @@ public class Utils {
         writer.close();
         
         return filename;
+    }
+    
+    public List<NNDataset> filterCategories(List<NNDataset> nndataset)
+    {
+        long[] countType = new long[9];
+        long max=0;
+        List<NNDataset> outDataset = new ArrayList<>();
+
+        countType[0] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==0).count();
+        countType[1] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==1).count();
+        countType[2] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==2).count();
+        countType[3] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==3).count();
+        countType[4] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==4).count();
+        countType[5] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==5).count();
+        countType[6] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==6).count();
+        countType[7] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==7).count();
+        countType[8] = nndataset.stream().map(x->x).filter(x->x.getIncident_type()==8).count();
+        
+        for (int i=1; i<=8; i++)
+        {
+            if(max<countType[i])
+                max=countType[i];
+        }
+                    
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==0).limit(2*max).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==1).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==2).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==3).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==4).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==5).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==6).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==7).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==8).collect(Collectors.toList()));
+        
+        return outDataset;
     }
 }
