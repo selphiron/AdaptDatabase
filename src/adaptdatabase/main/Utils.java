@@ -42,6 +42,7 @@ public class Utils {
     private final int     WINDOWSHIFT;
     private final int     TRAININGDATASET;
     private final int     USEDDATASET;
+    private final int[]   DISCARTEDINCIDENTS;
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -54,7 +55,7 @@ public class Utils {
     
     public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, 
             boolean USERTAG, int MINNUMBEROFREADINGS, int SAMPLETARGET, int WINDOWFRAME,
-            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET)
+            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET, int[] DISCARTEDINCIDENTS)
     {
         this.INPUTDATASETPATH = INPUTDATASETPATH;
         this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
@@ -66,6 +67,7 @@ public class Utils {
         this.WINDOWSHIFT = WINDOWSHIFT;
         this.TRAININGDATASET = TRAININGDATASET;
         this.USEDDATASET = USEDDATASET;
+        this.DISCARTEDINCIDENTS = DISCARTEDINCIDENTS;
     }
     
     public List<Incident> getSimraIncidents()
@@ -218,12 +220,12 @@ public class Utils {
             // Include USERTAG incidents
             if(USERTAG)
             {
-                if (incident.getIncident() != 0)
+                if (!excludedIncident(incident.getIncident()))
                     incidents.add(incident);
             }    
             else
             {
-                if (incident.getIncident() != 0 && incident.getTimestamp() != 1337)
+                if (!excludedIncident(incident.getIncident()) && incident.getTimestamp() != 1337)
                     incidents.add(incident);
             }
             
@@ -1053,5 +1055,14 @@ public class Utils {
         outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==8).collect(Collectors.toList()));
         
         return outDataset;
+    }
+    
+    public boolean excludedIncident(int incident_type)
+    {
+        for(int i=0; i<DISCARTEDINCIDENTS.length; i++)
+            if (incident_type == DISCARTEDINCIDENTS[i]) return true;
+        
+        return false;
+        
     }
 }

@@ -40,13 +40,16 @@ public class AdaptDatabase {
     // Dataset usage
     private static final int TRAININGDATASET = 100; //%
     private static final int USEDDATASET = 100; //%
+    
+    // Incidents not used
+    private static final int[] DISCARTEDINCIDENTS = {0,1,5,8}; // {} -> none incidents discarted / {1,2} -> incidents 1 and 2 discarted
             
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
     
     public static void main(String[] args) {
          
-        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT, TRAININGDATASET, USEDDATASET);
+        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS);
                 
         System.out.println(INPUTDATASETPATH);
         System.out.println("Begining the Data Extraction");
