@@ -39,7 +39,7 @@ public class Utils {
     private final int     MINNUMBEROFREADINGS;
     private final int     SAMPLETARGET;
     private final int     WINDOWFRAME;
-    private final int     WINDOWSHIFT;
+    private final int     WINDOWSPLIT;
     private final int     TRAININGDATASET;
     private final int     USEDDATASET;
     private final int[]   DISCARTEDINCIDENTS;
@@ -64,7 +64,7 @@ public class Utils {
         this.MINNUMBEROFREADINGS = MINNUMBEROFREADINGS;
         this.SAMPLETARGET = SAMPLETARGET;
         this.WINDOWFRAME = WINDOWFRAME;
-        this.WINDOWSHIFT = WINDOWSHIFT;
+        this.WINDOWSPLIT = WINDOWSHIFT;
         this.TRAININGDATASET = TRAININGDATASET;
         this.USEDDATASET = USEDDATASET;
         this.DISCARTEDINCIDENTS = DISCARTEDINCIDENTS;
@@ -466,15 +466,16 @@ public class Utils {
     public List<WindowedRide> chopRides(List<Ride> rides)
     {
         List<WindowedRide> windowedRides = new ArrayList<>();
-        List<Incident> incidents;
         WindowedRide ride;
         int i=0;
         long[] timestamps;
+        long timeslot = 0l, offset = 0l;
         List<Integer> initIndexes, endIndexes;
         Long t1 = 0l, dt = 0l, iTs = 0l;
         boolean nextStartSet;
         int bikeType = 0, phoneLocation = 0, incidentType = 0;
         int numberOfWindowedRides = 0;
+        int incidentSet = 0;
           
         for (Ride r : rides)
         {
@@ -493,7 +494,7 @@ public class Utils {
             for (int j=1; j < timestamps.length; j++)
             {
                 dt = timestamps[j] - t1;
-                if (dt >= WINDOWSHIFT && !nextStartSet && j != timestamps.length - 1)
+                if (dt >= WINDOWFRAME/WINDOWSPLIT && !nextStartSet && j != timestamps.length - 1)
                 {
                     initIndexes.add(j);
                     i = j;
@@ -523,36 +524,26 @@ public class Utils {
             for (int k=0; k < initIndexes.size(); k++)
             {
                 ii = initIndexes.get(k);
-                ei = endIndexes.get(k) + 1;
+                ei = endIndexes.get(k);
                 
                 ride = new WindowedRide();
                 
-                incidents = new ArrayList<>();
+                
+                // Look if between the middle interval there is an incident
                 for (Incident incident : r.getIncidents())
                 {
                     iTs = incident.getTimestamp();
-                    
-                    if (ei-ii % 2 != 0) // If the windowedRide length is odd
+
+                    offset = (timestamps[ei] - timestamps[ii]) % WINDOWSPLIT;
+                    timeslot = (timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
+
+                    if (timestamps[ii] + WINDOWFRAME/WINDOWSPLIT <= iTs && timestamps[ei] - WINDOWFRAME/WINDOWSPLIT >= iTs)
                     {
-                        if (Objects.equals(timestamps[ii + ((ei - ii) / 2)], iTs)) // We compare the center sample of the windowed ride to the incident timestamp
-                        {
-                            incidents.add(incident);
-                            incidentType = incident.getIncident();
-                        }
-                        else
-                            incidentType = 0;
+                        incidentType = incident.getIncident();
+                        incidentSet++;
                     }
                     else
-                    {
-                        if (timestamps[ii + (int) Math.floor((ei - ii) / 2)] <= iTs &&
-                            timestamps[ii + (int) Math.ceil((ei - ii) / 2)] >= iTs)
-                        {
-                            incidents.add(incident);
-                            incidentType = incident.getIncident();
-                        }
-                        else
-                            incidentType = 0;
-                    }       
+                        incidentType = 0;
                 }
                 
                 ride.setDs_name(r.getDs_name());
@@ -575,6 +566,8 @@ public class Utils {
                 if(numberOfWindowedRides%1000==0) System.out.println(numberOfWindowedRides + " windowed rides");
             }
         }
+        
+        System.out.println("Incidents set: " + incidentSet);
         
         return windowedRides;
 

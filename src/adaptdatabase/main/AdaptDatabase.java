@@ -17,7 +17,7 @@ import org.apache.logging.log4j.LogManager;
 public class AdaptDatabase {
 
     // Input and output dataset folder (The path must be finished with a slash '/')
-    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/TestDS/";
+    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
     private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/files20200128/";
     private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
     
@@ -35,7 +35,17 @@ public class AdaptDatabase {
 
     // Windowing
     private static final int WINDOWFRAME = 6000; //ms
-    private static final int WINDOWSHIFT = 3000; //ms
+    private static final int WINDOWSPLIT = 3; 
+    
+    /****************************************************
+    <-----------------------------------> Window Frame
+    <-----------> Window Shift = 1/3 of window frame
+     -----------------------------------
+    |     |     |     |     |     |     |
+    |     |     |     |     |     |     |
+     -----------------------------------
+                <-----------> Interval where incident is considered
+    ****************************************************/
     
     // Dataset usage
     private static final int TRAININGDATASET = 100; //%
@@ -49,7 +59,7 @@ public class AdaptDatabase {
     
     public static void main(String[] args) {
          
-        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSHIFT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS);
+        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS);
                 
         System.out.println(INPUTDATASETPATH);
         System.out.println("Begining the Data Extraction");
