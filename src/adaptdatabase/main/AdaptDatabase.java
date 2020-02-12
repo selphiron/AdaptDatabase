@@ -52,7 +52,7 @@ public class AdaptDatabase {
     private static final int USEDDATASET = 100; //%
     
     // Incidents not used
-    private static final int[] DISCARTEDINCIDENTS = {0,1,5,8}; // {} -> none incidents discarted / {1,2} -> incidents 1 and 2 discarted
+    private static final int[] DISCARTEDINCIDENTS = {0,1,2,3,4,5,8}; // {} -> none incidents discarted / {1,2} -> incidents 1 and 2 discarted
             
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);

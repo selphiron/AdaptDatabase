@@ -962,11 +962,13 @@ public class Utils {
                     {
                         s1 = s[1].split(".csv");
                         if(Integer.valueOf(s1[0]) > maxFile)
-                            maxFile = Integer.valueOf(s1[0])+1;            
+                            maxFile = Integer.valueOf(s1[0]);            
                     }
                 } 
             }
         }
+        
+        maxFile++;
         
         if (dsFile)
             new File(filename).renameTo(new File(path+"dataset" + maxFile + ".csv"));
