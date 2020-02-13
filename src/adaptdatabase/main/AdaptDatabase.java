@@ -52,14 +52,18 @@ public class AdaptDatabase {
     private static final int USEDDATASET = 100; //%
     
     // Incidents not used
-    private static final int[] DISCARTEDINCIDENTS = {0,1,2,3,4,5,8}; // {} -> none incidents discarted / {1,2} -> incidents 1 and 2 discarted
+    private static final int[] DISCARTEDINCIDENTS = {0,1,5,8}; // {} -> none incidents discarted / {1,2} -> incidents 1 and 2 discarted
             
+    // Incidents not used
+    private static final boolean BINARYCLASSIFICATION = false; // Change all type of incients to 1 -> Try to identify if there is an incident or not
+
+    
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
     
     public static void main(String[] args) {
          
-        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS);
+        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS, BINARYCLASSIFICATION);
                 
         System.out.println(INPUTDATASETPATH);
         System.out.println("Begining the Data Extraction");
