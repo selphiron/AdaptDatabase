@@ -43,6 +43,7 @@ public class Utils {
     private final int     TRAININGDATASET;
     private final int     USEDDATASET;
     private final int[]   DISCARTEDINCIDENTS;
+    private final boolean BINARYCLASSIFICATION;
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -55,7 +56,8 @@ public class Utils {
     
     public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, 
             boolean USERTAG, int MINNUMBEROFREADINGS, int SAMPLETARGET, int WINDOWFRAME,
-            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET, int[] DISCARTEDINCIDENTS)
+            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET, int[] DISCARTEDINCIDENTS,
+            boolean BINARYCLASSIFICATION)
     {
         this.INPUTDATASETPATH = INPUTDATASETPATH;
         this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
@@ -68,6 +70,7 @@ public class Utils {
         this.TRAININGDATASET = TRAININGDATASET;
         this.USEDDATASET = USEDDATASET;
         this.DISCARTEDINCIDENTS = DISCARTEDINCIDENTS;
+        this.BINARYCLASSIFICATION = BINARYCLASSIFICATION;
     }
     
     public List<Incident> getSimraIncidents()
@@ -539,7 +542,10 @@ public class Utils {
 
                     if (timestamps[ii] + WINDOWFRAME/WINDOWSPLIT <= iTs && timestamps[ei] - WINDOWFRAME/WINDOWSPLIT >= iTs)
                     {
-                        incidentType = incident.getIncident();
+                        if(BINARYCLASSIFICATION)
+                            incidentType = 1;
+                        else
+                            incidentType = incident.getIncident();
                         incidentSet++;
                     }
                     else
@@ -1060,4 +1066,5 @@ public class Utils {
         return false;
         
     }
+    
 }
