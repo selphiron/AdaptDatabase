@@ -19,7 +19,7 @@ public class AdaptDatabase {
     // Input and output dataset folder (The path must be finished with a slash '/')
     //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
     private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/files20200128/";
-    private static final String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
+    private static String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
     
     // Excel Extraction
     private static final boolean EXTRACTION = true;
@@ -56,12 +56,15 @@ public class AdaptDatabase {
             
     // Incidents not used
     private static final boolean BINARYCLASSIFICATION = false; // Change all type of incients to 1 -> Try to identify if there is an incident or not
-
+    
     
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
     
     public static void main(String[] args) {
+        
+        if(BINARYCLASSIFICATION) OUTPUTDATASETPATH += "binaryDS/";
+        else OUTPUTDATASETPATH += "DS/";
          
         Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS, BINARYCLASSIFICATION);
                 
