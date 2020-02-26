@@ -240,6 +240,7 @@ public class Utils {
     public List<Ride> getRides(List<Incident> incidents) 
             throws IOException
     {
+        boolean fileWithWrongFormat = false;
         List<Ride> rides = new ArrayList<>();
         Ride ride;
         int numberOfRides = 0;
@@ -261,6 +262,7 @@ public class Utils {
 
         for(String f : filenames)
         {
+            fileWithWrongFormat = false;
             ride = new Ride();
             ride.setDs_name(f);
             // Take all the incidents of the file
@@ -296,172 +298,185 @@ public class Utils {
             while(!line.equals("lat,lon,X,Y,Z,timeStamp,acc,a,b,c"))
             {
                 line = br.readLine();
+                if(line.equals("lat,lon,X,Y,Z,timeStamp")) 
+                {
+                    fileWithWrongFormat = true;
+                    break;
+                }
             }
             
-            line = br.readLine();
-            String[] incidentFields = line.split(",",-1); 
-            
-            // Save values that are not in constant updating
-            prevLat = Double.parseDouble(incidentFields[0]);
-            prevLon = Double.parseDouble(incidentFields[1]);
-            prevAcc_68 = Float.parseFloat(incidentFields[6]);
-            prevGyr_a  = Float.parseFloat(incidentFields[7]);
-            prevGyr_b  = Float.parseFloat(incidentFields[8]);
-            prevGyr_c  = Float.parseFloat(incidentFields[9]); 
-            
-            // Read all the file
-            while (line != null)
+            if (!fileWithWrongFormat) 
             {
-                incidentFields = line.split(",",-1); 
-                // Counter for readings
-                // If there is no data in Latitude field (incidentFields[0]) we
-                // add the counter
-                if (incidentFields[0].equals(""))
-                {
-                    readings++;
-                }
-                // If there is data we save the tmp data if the # of readings is enough
-                else
-                {
-                    // If the number of readings is sufficient we save it
-                    if (readings >= MINNUMBEROFREADINGS)
-                    {
-                        latitude.addAll(tmp_latitude);
-                        longitude.addAll(tmp_longitude);
-                        acc_x.addAll(tmp_acc_x);
-                        acc_y.addAll(tmp_acc_y);
-                        acc_z.addAll(tmp_acc_z);
-                        timestamp.addAll(tmp_timestamp);
-                        acc_68.addAll(tmp_acc_68);
-                        gyr_a.addAll(tmp_gyr_a);
-                        gyr_b.addAll(tmp_gyr_b);
-                        gyr_c.addAll(tmp_gyr_c);
-                        tmp_latitude.clear();
-                        tmp_longitude.clear();
-                        tmp_acc_x.clear();
-                        tmp_acc_y.clear();
-                        tmp_acc_z.clear();
-                        tmp_timestamp.clear();
-                        tmp_acc_68.clear();
-                        tmp_gyr_a.clear();
-                        tmp_gyr_b.clear();
-                        tmp_gyr_c.clear();
-                    }
-                    readings = 1;
-
-                }
-                
-                if (incidentFields[0].equals(""))
-                    tmp_latitude.add(prevLat);
-                else
-                {
-                    tmp_latitude.add(Double.parseDouble(incidentFields[0]));
-                    prevLat = tmp_latitude.get(tmp_latitude.size()-1);
-                }
-
-                if (incidentFields[1].equals(""))
-                    tmp_longitude.add(prevLon);
-                else
-                {
-                    tmp_longitude.add(Double.parseDouble(incidentFields[1]));
-                    prevLon = tmp_longitude.get(tmp_longitude.size()-1);
-                }
-
-                tmp_acc_x.add(Float.parseFloat(incidentFields[2]));
-                tmp_acc_y.add(Float.parseFloat(incidentFields[3]));
-                tmp_acc_z.add(Float.parseFloat(incidentFields[4]));
-                tmp_timestamp.add(Long.parseLong(incidentFields[5]));
-                if (incidentFields[6].equals(""))
-                    tmp_acc_68.add(prevAcc_68);
-                else
-                {
-                    tmp_acc_68.add(Float.parseFloat(incidentFields[6]));
-                    prevAcc_68 = tmp_acc_68.get(tmp_acc_68.size()-1);
-                }
-                if (incidentFields[7].equals(""))
-                    tmp_gyr_a.add(prevGyr_a);
-                else
-                {
-                    tmp_gyr_a.add(Float.parseFloat(incidentFields[7]));
-                    prevGyr_a = tmp_gyr_a.get(tmp_gyr_a.size()-1);
-                }
-                if (incidentFields[8].equals(""))
-                    tmp_gyr_b.add(prevGyr_b);
-                else
-                {
-                    tmp_gyr_b.add(Float.parseFloat(incidentFields[8]));
-                    prevGyr_b = tmp_gyr_b.get(tmp_gyr_b.size()-1);
-                }
-                if (incidentFields[9].equals(""))
-                    tmp_gyr_c.add(prevGyr_c);
-                else
-                {
-                    tmp_gyr_c.add(Float.parseFloat(incidentFields[9]));
-                    prevGyr_c = tmp_gyr_c.get(tmp_gyr_c.size()-1);
-                }
-                
-                // Read next line
                 line = br.readLine();
-                
-                if (line == null && readings >= MINNUMBEROFREADINGS)
+                if (line != null)
                 {
-                    latitude.addAll(tmp_latitude);
-                    longitude.addAll(tmp_longitude);
-                    acc_x.addAll(tmp_acc_x);
-                    acc_y.addAll(tmp_acc_y);
-                    acc_z.addAll(tmp_acc_z);
-                    timestamp.addAll(tmp_timestamp);
-                    acc_68.addAll(tmp_acc_68);
-                    gyr_a.addAll(tmp_gyr_a);
-                    gyr_b.addAll(tmp_gyr_b);
-                    gyr_c.addAll(tmp_gyr_c);
-                    tmp_latitude.clear();
-                    tmp_longitude.clear();
-                    tmp_acc_x.clear();
-                    tmp_acc_y.clear();
-                    tmp_acc_z.clear();
-                    tmp_timestamp.clear();
-                    tmp_acc_68.clear();
-                    tmp_gyr_a.clear();
-                    tmp_gyr_b.clear();
-                    tmp_gyr_c.clear();
-                    readings = 1;
-                }
-            }
+                    String[] incidentFields = line.split(",",-1); 
 
-            // Saving detailed data to the ride
-            if(!latitude.isEmpty())
-                ride.setLatitude(latitude);
-            if(!longitude.isEmpty())
-                ride.setLongitude(longitude);
-            if(!acc_x.isEmpty())
-                ride.setAcc_x(acc_x);
-            if(!acc_y.isEmpty())
-                ride.setAcc_y(acc_y);
-            if(!acc_z.isEmpty())
-                ride.setAcc_z(acc_z);
-            if(!timestamp.isEmpty())
-                ride.setTimestamp(timestamp);
-            if(!acc_68.isEmpty())
-                ride.setAcc_68(acc_68);
-            if(!gyr_a.isEmpty())
-                ride.setGyr_a(gyr_a);
-            if(!gyr_b.isEmpty())
-                ride.setGyr_b(gyr_b);
-            if(!gyr_c.isEmpty())
-                ride.setGyr_c(gyr_c);
-            if (ride.getLatitude() != null || ride.getLongitude()!= null || ride.getAcc_x() != null ||
-                ride.getAcc_y() != null || ride.getAcc_z() != null || ride.getTimestamp() != null ||
-                ride.getAcc_68() != null || ride.getGyr_a() != null || ride.getGyr_b() != null ||
-                ride.getGyr_c() != null)
-            {
-                rides.add(ride);
-                //System.out.println("Ride added from file: " + f);
-                numberOfRides++;
-                if(numberOfRides%100==0) System.out.println(numberOfRides + " rides readed");
-                    
-            }    
+                    // Save values that are not in constant updating
+                    prevLat = Double.parseDouble(incidentFields[0]);
+                    prevLon = Double.parseDouble(incidentFields[1]);
+                    prevAcc_68 = Float.parseFloat(incidentFields[6]);
+                    prevGyr_a  = Float.parseFloat(incidentFields[7]);
+                    prevGyr_b  = Float.parseFloat(incidentFields[8]);
+                    prevGyr_c  = Float.parseFloat(incidentFields[9]); 
+
+                    // Read all the file
+                    while (line != null)
+                    {
+                        incidentFields = line.split(",",-1); 
+                        // Counter for readings
+                        // If there is no data in Latitude field (incidentFields[0]) we
+                        // add the counter
+                        if (incidentFields[0].equals(""))
+                        {
+                            readings++;
+                        }
+                        // If there is data we save the tmp data if the # of readings is enough
+                        else
+                        {
+                            // If the number of readings is sufficient we save it
+                            if (readings >= MINNUMBEROFREADINGS)
+                            {
+                                latitude.addAll(tmp_latitude);
+                                longitude.addAll(tmp_longitude);
+                                acc_x.addAll(tmp_acc_x);
+                                acc_y.addAll(tmp_acc_y);
+                                acc_z.addAll(tmp_acc_z);
+                                timestamp.addAll(tmp_timestamp);
+                                acc_68.addAll(tmp_acc_68);
+                                gyr_a.addAll(tmp_gyr_a);
+                                gyr_b.addAll(tmp_gyr_b);
+                                gyr_c.addAll(tmp_gyr_c);
+                                tmp_latitude.clear();
+                                tmp_longitude.clear();
+                                tmp_acc_x.clear();
+                                tmp_acc_y.clear();
+                                tmp_acc_z.clear();
+                                tmp_timestamp.clear();
+                                tmp_acc_68.clear();
+                                tmp_gyr_a.clear();
+                                tmp_gyr_b.clear();
+                                tmp_gyr_c.clear();
+                            }
+                            readings = 1;
+
+                        }
+
+                        if (incidentFields[0].equals(""))
+                            tmp_latitude.add(prevLat);
+                        else
+                        {
+                            tmp_latitude.add(Double.parseDouble(incidentFields[0]));
+                            prevLat = tmp_latitude.get(tmp_latitude.size()-1);
+                        }
+
+                        if (incidentFields[1].equals(""))
+                            tmp_longitude.add(prevLon);
+                        else
+                        {
+                            tmp_longitude.add(Double.parseDouble(incidentFields[1]));
+                            prevLon = tmp_longitude.get(tmp_longitude.size()-1);
+                        }
+
+                        tmp_acc_x.add(Float.parseFloat(incidentFields[2]));
+                        tmp_acc_y.add(Float.parseFloat(incidentFields[3]));
+                        tmp_acc_z.add(Float.parseFloat(incidentFields[4]));
+                        tmp_timestamp.add(Long.parseLong(incidentFields[5]));
+                        if (incidentFields[6].equals(""))
+                            tmp_acc_68.add(prevAcc_68);
+                        else
+                        {
+                            tmp_acc_68.add(Float.parseFloat(incidentFields[6]));
+                            prevAcc_68 = tmp_acc_68.get(tmp_acc_68.size()-1);
+                        }
+                        if (incidentFields[7].equals(""))
+                            tmp_gyr_a.add(prevGyr_a);
+                        else
+                        {
+                            tmp_gyr_a.add(Float.parseFloat(incidentFields[7]));
+                            prevGyr_a = tmp_gyr_a.get(tmp_gyr_a.size()-1);
+                        }
+                        if (incidentFields[8].equals(""))
+                            tmp_gyr_b.add(prevGyr_b);
+                        else
+                        {
+                            tmp_gyr_b.add(Float.parseFloat(incidentFields[8]));
+                            prevGyr_b = tmp_gyr_b.get(tmp_gyr_b.size()-1);
+                        }
+                        if (incidentFields[9].equals(""))
+                            tmp_gyr_c.add(prevGyr_c);
+                        else
+                        {
+                            tmp_gyr_c.add(Float.parseFloat(incidentFields[9]));
+                            prevGyr_c = tmp_gyr_c.get(tmp_gyr_c.size()-1);
+                        }
+
+                        // Read next line
+                        line = br.readLine();
+
+                        if (line == null && readings >= MINNUMBEROFREADINGS)
+                        {
+                            latitude.addAll(tmp_latitude);
+                            longitude.addAll(tmp_longitude);
+                            acc_x.addAll(tmp_acc_x);
+                            acc_y.addAll(tmp_acc_y);
+                            acc_z.addAll(tmp_acc_z);
+                            timestamp.addAll(tmp_timestamp);
+                            acc_68.addAll(tmp_acc_68);
+                            gyr_a.addAll(tmp_gyr_a);
+                            gyr_b.addAll(tmp_gyr_b);
+                            gyr_c.addAll(tmp_gyr_c);
+                            tmp_latitude.clear();
+                            tmp_longitude.clear();
+                            tmp_acc_x.clear();
+                            tmp_acc_y.clear();
+                            tmp_acc_z.clear();
+                            tmp_timestamp.clear();
+                            tmp_acc_68.clear();
+                            tmp_gyr_a.clear();
+                            tmp_gyr_b.clear();
+                            tmp_gyr_c.clear();
+                            readings = 1;
+                        }
+                    }
+
+                    // Saving detailed data to the ride
+                    if(!latitude.isEmpty())
+                        ride.setLatitude(latitude);
+                    if(!longitude.isEmpty())
+                        ride.setLongitude(longitude);
+                    if(!acc_x.isEmpty())
+                        ride.setAcc_x(acc_x);
+                    if(!acc_y.isEmpty())
+                        ride.setAcc_y(acc_y);
+                    if(!acc_z.isEmpty())
+                        ride.setAcc_z(acc_z);
+                    if(!timestamp.isEmpty())
+                        ride.setTimestamp(timestamp);
+                    if(!acc_68.isEmpty())
+                        ride.setAcc_68(acc_68);
+                    if(!gyr_a.isEmpty())
+                        ride.setGyr_a(gyr_a);
+                    if(!gyr_b.isEmpty())
+                        ride.setGyr_b(gyr_b);
+                    if(!gyr_c.isEmpty())
+                        ride.setGyr_c(gyr_c);
+                    if (ride.getLatitude() != null || ride.getLongitude()!= null || ride.getAcc_x() != null ||
+                        ride.getAcc_y() != null || ride.getAcc_z() != null || ride.getTimestamp() != null ||
+                        ride.getAcc_68() != null || ride.getGyr_a() != null || ride.getGyr_b() != null ||
+                        ride.getGyr_c() != null)
+                    {
+                        rides.add(ride);
+                        //System.out.println("Ride added from file: " + f);
+                        numberOfRides++;
+                        if(numberOfRides%100==0) System.out.println(numberOfRides + " rides readed");
+
+                    }    
+                }
+                else System.out.println("Filename: " + f + " is empty");
+            }
         }
+        
         return rides;
         
     }
@@ -482,6 +497,7 @@ public class Utils {
           
         for (Ride r : rides)
         {
+            System.out.println(r.getDs_name());
             nextStartSet = false;
             initIndexes = new ArrayList<>();
             endIndexes = new ArrayList<>();
@@ -489,87 +505,90 @@ public class Utils {
             // Phone Location and Bike Type should not change between incidents
             bikeType = r.getIncidents().get(0).getBike();
             phoneLocation = r.getIncidents().get(0).getpLoc();
-            
-            timestamps = r.getTimestamp().stream().mapToLong(x->x).toArray();
-            t1 = timestamps[0];
-            initIndexes.add(0);
-            
-            for (int j=1; j < timestamps.length; j++)
+            // We check that the ride is longer than the actual Windowframe span
+            if(r.getTimestamp().get(r.getTimestamp().size()-1) - r.getTimestamp().get(0) >= WINDOWFRAME)
             {
-                dt = timestamps[j] - t1;
-                if (dt >= WINDOWFRAME/WINDOWSPLIT && !nextStartSet && j != timestamps.length - 1)
-                {
-                    initIndexes.add(j);
-                    i = j;
-                    nextStartSet = true;
-                }
-                if (dt >= WINDOWFRAME)
-                {
-                    endIndexes.add(j);
-                    t1 = timestamps[i];
-                    if (timestamps[timestamps.length -1] - t1 > WINDOWFRAME)
-                        j = i;
-                    else
-                        j = timestamps.length - 1;
-                    nextStartSet = false;
-                }
-                if (j == timestamps.length - 1)
-                    endIndexes.add(j);
-            }
-            int d = endIndexes.size()-initIndexes.size(); 
-            if ( d>0 && !endIndexes.contains(timestamps.length-1))
-                endIndexes.add(timestamps.length-1);
-            else 
-                for (int rm=1; rm<=d; rm++)
-                    initIndexes.remove(initIndexes.size()-1);
-            
-            int ii = 0, ei = 0;
-            for (int k=0; k < initIndexes.size(); k++)
-            {
-                ii = initIndexes.get(k);
-                ei = endIndexes.get(k);
-                
-                ride = new WindowedRide();
-                
-                
-                // Look if between the middle interval there is an incident
-                for (Incident incident : r.getIncidents())
-                {
-                    iTs = incident.getTimestamp();
+                timestamps = r.getTimestamp().stream().mapToLong(x->x).toArray();
+                t1 = timestamps[0];
+                initIndexes.add(0);
 
-                    offset = (timestamps[ei] - timestamps[ii]) % WINDOWSPLIT;
-                    timeslot = (timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
-
-                    if (timestamps[ii] + WINDOWFRAME/WINDOWSPLIT <= iTs && timestamps[ei] - WINDOWFRAME/WINDOWSPLIT >= iTs)
+                for (int j=1; j < timestamps.length; j++)
+                {
+                    dt = timestamps[j] - t1;
+                    if (dt >= WINDOWFRAME/WINDOWSPLIT && !nextStartSet && j != timestamps.length - 1)
                     {
-                        if(BINARYCLASSIFICATION)
-                            incidentType = 1;
-                        else
-                            incidentType = incident.getIncident();
-                        incidentSet++;
+                        initIndexes.add(j);
+                        i = j;
+                        nextStartSet = true;
                     }
-                    else
-                        incidentType = 0;
+                    if (dt >= WINDOWFRAME)
+                    {
+                        endIndexes.add(j);
+                        t1 = timestamps[i];
+                        if (timestamps[timestamps.length -1] - t1 > WINDOWFRAME)
+                            j = i;
+                        else
+                            j = timestamps.length - 1;
+                        nextStartSet = false;
+                    }
+                    if (j == timestamps.length - 1)
+                        endIndexes.add(j);
                 }
-                
-                ride.setDs_name(r.getDs_name());
-                ride.setPhoneLocation(phoneLocation);
-                ride.setBikeType(bikeType);
-                ride.setIncident(incidentType);
-                ride.setLatitude(r.getLatitude().subList(ii, ei));
-                ride.setLongitude(r.getLongitude().subList(ii, ei));
-                ride.setAcc_x(r.getAcc_x().subList(ii, ei));
-                ride.setAcc_y(r.getAcc_y().subList(ii, ei));
-                ride.setAcc_z(r.getAcc_z().subList(ii, ei));
-                ride.setTimestamp(r.getTimestamp().subList(ii, ei));
-                ride.setAcc_68(r.getAcc_68().subList(ii, ei));
-                ride.setGyr_a(r.getGyr_a().subList(ii, ei));
-                ride.setGyr_b(r.getGyr_b().subList(ii, ei));
-                ride.setGyr_c(r.getGyr_c().subList(ii, ei));
-                
-                windowedRides.add(ride);
-                numberOfWindowedRides++;
-                if(numberOfWindowedRides%1000==0) System.out.println(numberOfWindowedRides + " windowed rides");
+                int d = endIndexes.size()-initIndexes.size(); 
+                if ( d>0 && !endIndexes.contains(timestamps.length-1))
+                    endIndexes.add(timestamps.length-1);
+                else 
+                    for (int rm=1; rm<=d; rm++)
+                        initIndexes.remove(initIndexes.size()-1);
+
+                int ii = 0, ei = 0;
+                for (int k=0; k < initIndexes.size(); k++)
+                {
+                    ii = initIndexes.get(k);
+                    ei = endIndexes.get(k);
+
+                    ride = new WindowedRide();
+
+
+                    // Look if between the middle interval there is an incident
+                    for (Incident incident : r.getIncidents())
+                    {
+                        iTs = incident.getTimestamp();
+
+                        offset = (timestamps[ei] - timestamps[ii]) % WINDOWSPLIT;
+                        timeslot = (timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
+
+                        if (timestamps[ii] + WINDOWFRAME/WINDOWSPLIT <= iTs && timestamps[ei] - WINDOWFRAME/WINDOWSPLIT >= iTs)
+                        {
+                            if(BINARYCLASSIFICATION)
+                                incidentType = 1;
+                            else
+                                incidentType = incident.getIncident();
+                            incidentSet++;
+                        }
+                        else
+                            incidentType = 0;
+                    }
+
+                    ride.setDs_name(r.getDs_name());
+                    ride.setPhoneLocation(phoneLocation);
+                    ride.setBikeType(bikeType);
+                    ride.setIncident(incidentType);
+                    ride.setLatitude(r.getLatitude().subList(ii, ei));
+                    ride.setLongitude(r.getLongitude().subList(ii, ei));
+                    ride.setAcc_x(r.getAcc_x().subList(ii, ei));
+                    ride.setAcc_y(r.getAcc_y().subList(ii, ei));
+                    ride.setAcc_z(r.getAcc_z().subList(ii, ei));
+                    ride.setTimestamp(r.getTimestamp().subList(ii, ei));
+                    ride.setAcc_68(r.getAcc_68().subList(ii, ei));
+                    ride.setGyr_a(r.getGyr_a().subList(ii, ei));
+                    ride.setGyr_b(r.getGyr_b().subList(ii, ei));
+                    ride.setGyr_c(r.getGyr_c().subList(ii, ei));
+
+                    windowedRides.add(ride);
+                    numberOfWindowedRides++;
+                    if(numberOfWindowedRides%1000==0) System.out.println(numberOfWindowedRides + " windowed rides");
+                }
             }
         }
         
@@ -1019,7 +1038,7 @@ public class Utils {
         
         writer.flush();
         writer.close();
-        
+        System.out.println(String.format("Csv records: %d",csvRecords));
         return filename;
     }
     

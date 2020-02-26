@@ -17,8 +17,12 @@ import org.apache.logging.log4j.LogManager;
 public class AdaptDatabase {
 
     // Input and output dataset folder (The path must be finished with a slash '/')
-    //private static final String INPUTDATASETPATH = Paths.get("").toAbsolutePath().toString() + "/test/";
-    private static final String INPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/files20200128/";
+    private static final String[] datasetpaths = 
+    {"/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/SimRa_Sample_02_20_20/iOS0/",
+    "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/SimRa_Sample_02_20_20/iOS1/",
+    "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/SimRa_Sample_02_20_20/android0/",
+    "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/SimRa_Sample_02_20_20/android1/",
+    "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/dataset/SimRa_Sample_02_20_20/android2/"};
     private static String OUTPUTDATASETPATH = "/Users/AlbertSanchez/Desktop/TFM (noDropBox)/Dataset/";
     
     // Excel Extraction
@@ -57,78 +61,88 @@ public class AdaptDatabase {
     // Incidents not used
     private static final boolean BINARYCLASSIFICATION = false; // Change all type of incients to 1 -> Try to identify if there is an incident or not
     
-    
     // Logging
     static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(AdaptDatabase.class);
     
     public static void main(String[] args) {
         
+        String INPUTDATASETPATH = "";
+        Utils u;
+        List<Incident> incidents;
+        List<Ride> rides;
+        List<WindowedRide> windowedRides;
+        List<NNDataset> nndataset;
+        
         if(BINARYCLASSIFICATION) OUTPUTDATASETPATH += "binaryDS/";
         else OUTPUTDATASETPATH += "DS/";
-         
-        Utils u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS, BINARYCLASSIFICATION);
-                
-        System.out.println(INPUTDATASETPATH);
-        System.out.println("Begining the Data Extraction");
-        logger.info("Starting data extraction");
-        System.out.println("...");
-        System.out.println("Searching files in " + INPUTDATASETPATH + " ...");
-        logger.info("Dataset path: " + INPUTDATASETPATH);
-
         
-        // Get all the incidents
-        List<Incident> incidents = new ArrayList<>();
-        incidents = u.getSimraIncidents();
-        
-        System.out.println("Files readed. " + incidents.size() + " incidents found");
-
-        // Get rides
-        List<Ride> rides = new ArrayList<>(); 
-        try
+        for(int i=0; i<datasetpaths.length; i++)
         {
-            rides = u.getRides(incidents);
-        }
-        catch (Exception e)
-        {
-            //Logger.logMsg(Logger.WARNING, e.getMessage());
-        }
-        
-        System.out.println("Rides readed: " + rides.size());
-        //for (Ride r : rides)
-        //    r.getTimestamp().forEach(System.out::println);
-                   
-        // Chop rides in little windows
-        List<WindowedRide> windowedRides = new ArrayList<>();
-        
-        System.out.println("Windowing files");
+            
+            INPUTDATASETPATH = datasetpaths[i];
 
-        windowedRides = u.chopRides(rides);
-        
-        System.out.println("Windowed Rides! - Number of windowed rides: " + windowedRides.size());
+            u = new Utils(INPUTDATASETPATH,OUTPUTDATASETPATH, EXTRACTION, USERTAG, MINNUMBEROFREADINGS, SAMPLETARGET, WINDOWFRAME, WINDOWSPLIT, TRAININGDATASET, USEDDATASET, DISCARTEDINCIDENTS, BINARYCLASSIFICATION);
 
+            System.out.println(INPUTDATASETPATH);
+            System.out.println("Begining the Data Extraction");
+            logger.info("Starting data extraction");
+            System.out.println("...");
+            System.out.println("Searching files in " + INPUTDATASETPATH + " ...");
+            logger.info("Dataset path: " + INPUTDATASETPATH);
 
-        // Calculate statistics
-        List<NNDataset> nndataset = new ArrayList<>();
-        
-        nndataset = u.calculateStatistics(windowedRides);
-        
-        System.out.println("NN Dataset Generated! - NNDataset Size: " + nndataset.size());
+            // Get all the incidents
+            incidents = new ArrayList<>();
+            incidents = u.getSimraIncidents();
 
-        // Generate excel
-        if (EXTRACTION)
-        {
-            String filepath = "";
+            System.out.println("Files readed. " + incidents.size() + " incidents found");
+
+            // Get rides
+            rides = new ArrayList<>(); 
             try
             {
-                //filepath = u.writeXLSNNDataset(OUTPUTDATASETPATH, nndataset);
-                //System.out.println("Excel Generated! - NNDataset excel path: " + filepath);
-                filepath = u.writeCSVFile(OUTPUTDATASETPATH, u.filterCategories(nndataset));
-                System.out.println("CSV Generated! - NNDataset csv path: " + filepath);
-
+                rides = u.getRides(incidents);
+                incidents = null;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                logger.error(e.getMessage());            
+                System.out.println("Error while getting rides: " + e.getMessage());
+            }
+
+            System.out.println("Rides readed: " + rides.size());
+            //for (Ride r : rides)
+            //    r.getTimestamp().forEach(System.out::println);
+
+            // Chop rides in little windows
+            windowedRides = new ArrayList<>();
+
+            System.out.println("Windowing files");
+
+            windowedRides = u.chopRides(rides);
+            rides = null;
+            System.out.println("Windowed Rides! - Number of windowed rides: " + windowedRides.size());
+
+            // Calculate statistics
+            nndataset = new ArrayList<>();
+            nndataset = u.calculateStatistics(windowedRides);
+            windowedRides = null;
+            System.out.println("NN Dataset Generated! - NNDataset Size: " + nndataset.size());
+
+            // Generate excel
+            if (EXTRACTION)
+            {
+                String filepath = "";
+                try
+                {
+                    //filepath = u.writeXLSNNDataset(OUTPUTDATASETPATH, nndataset);
+                    //System.out.println("Excel Generated! - NNDataset excel path: " + filepath);
+                    filepath = u.writeCSVFile(OUTPUTDATASETPATH, u.filterCategories(nndataset));
+                    System.out.println("CSV Generated! - NNDataset csv path: " + filepath);
+                    nndataset = null;
+                }
+                catch(Exception e)
+                {
+                    logger.error(e.getMessage());            
+                }
             }
         }
             
