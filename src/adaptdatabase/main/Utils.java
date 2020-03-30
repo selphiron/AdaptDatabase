@@ -37,13 +37,15 @@ public class Utils {
     private final boolean EXTRACTION;
     private final boolean USERTAG;
     private final int     MINNUMBEROFREADINGS;
-    private final int     SAMPLETARGET;
     private final int     WINDOWFRAME;
     private final int     WINDOWSPLIT;
     private final int     TRAININGDATASET;
     private final int     USEDDATASET;
     private final int[]   DISCARTEDINCIDENTS;
     private final boolean BINARYCLASSIFICATION;
+    private final boolean TERNARYCLASSIFICATION;
+    private final int     ELEMENTINTERNARYCLASSIFICATION;
+    
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -54,23 +56,24 @@ public class Utils {
     double[] fftDataZ;
 
     
-    public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, 
-            boolean USERTAG, int MINNUMBEROFREADINGS, int SAMPLETARGET, int WINDOWFRAME,
-            int WINDOWSHIFT, int TRAININGDATASET, int USEDDATASET, int[] DISCARTEDINCIDENTS,
-            boolean BINARYCLASSIFICATION)
+    public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, boolean USERTAG,
+                 int MINNUMBEROFREADINGS, int WINDOWFRAME, int WINDOWSHIFT, int TRAININGDATASET,
+                 int USEDDATASET, int[] DISCARTEDINCIDENTS, boolean BINARYCLASSIFICATION,
+                 boolean TERNARYCLASSIFICATION, int ELEMENTINTERNARYCLASSIFICATION)
     {
         this.INPUTDATASETPATH = INPUTDATASETPATH;
         this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
         this.EXTRACTION = EXTRACTION;
         this.USERTAG = USERTAG;
         this.MINNUMBEROFREADINGS = MINNUMBEROFREADINGS;
-        this.SAMPLETARGET = SAMPLETARGET;
         this.WINDOWFRAME = WINDOWFRAME;
         this.WINDOWSPLIT = WINDOWSHIFT;
         this.TRAININGDATASET = TRAININGDATASET;
         this.USEDDATASET = USEDDATASET;
         this.DISCARTEDINCIDENTS = DISCARTEDINCIDENTS;
         this.BINARYCLASSIFICATION = BINARYCLASSIFICATION;
+        this.TERNARYCLASSIFICATION = TERNARYCLASSIFICATION;
+        this.ELEMENTINTERNARYCLASSIFICATION = ELEMENTINTERNARYCLASSIFICATION;
     }
     
     public List<Incident> getSimraIncidents()
@@ -320,6 +323,19 @@ public class Utils {
                     prevGyr_b  = Float.parseFloat(incidentFields[8]);
                     prevGyr_c  = Float.parseFloat(incidentFields[9]); 
 
+                    // Add the first line values
+                    tmp_latitude.add(prevLat);
+                    tmp_longitude.add(prevLon);
+                    tmp_acc_x.add(Float.parseFloat(incidentFields[2]));
+                    tmp_acc_y.add(Float.parseFloat(incidentFields[3]));
+                    tmp_acc_z.add(Float.parseFloat(incidentFields[4]));
+                    tmp_timestamp.add(Long.parseLong(incidentFields[5]));
+                    tmp_acc_68.add(prevAcc_68);
+                    tmp_gyr_a.add(prevGyr_a);
+                    tmp_gyr_b.add(prevGyr_b);
+                    tmp_gyr_c.add(prevGyr_c);
+                    line = br.readLine();
+                    
                     // Read all the file
                     while (line != null)
                     {
@@ -347,19 +363,19 @@ public class Utils {
                                 gyr_a.addAll(tmp_gyr_a);
                                 gyr_b.addAll(tmp_gyr_b);
                                 gyr_c.addAll(tmp_gyr_c);
-                                tmp_latitude.clear();
-                                tmp_longitude.clear();
-                                tmp_acc_x.clear();
-                                tmp_acc_y.clear();
-                                tmp_acc_z.clear();
-                                tmp_timestamp.clear();
-                                tmp_acc_68.clear();
-                                tmp_gyr_a.clear();
-                                tmp_gyr_b.clear();
-                                tmp_gyr_c.clear();
                             }
+                            tmp_latitude.clear();
+                            tmp_longitude.clear();
+                            tmp_acc_x.clear();
+                            tmp_acc_y.clear();
+                            tmp_acc_z.clear();
+                            tmp_timestamp.clear();
+                            tmp_acc_68.clear();
+                            tmp_gyr_a.clear();
+                            tmp_gyr_b.clear();
+                            tmp_gyr_c.clear();
+                            
                             readings = 1;
-
                         }
 
                         if (incidentFields[0].equals(""))
@@ -555,13 +571,19 @@ public class Utils {
                     {
                         iTs = incident.getTimestamp();
 
-                        offset = (timestamps[ei] - timestamps[ii]) % WINDOWSPLIT;
-                        timeslot = (timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
+                        timeslot = (long)Math.ceil(timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
 
-                        if (timestamps[ii] + WINDOWFRAME/WINDOWSPLIT <= iTs && timestamps[ei] - WINDOWFRAME/WINDOWSPLIT >= iTs)
+                        if (timestamps[ii] + timeslot <= iTs && timestamps[ei] - timeslot >= iTs)
                         {
                             if(BINARYCLASSIFICATION)
                                 incidentType = 1;
+                            else if (TERNARYCLASSIFICATION)
+                            {
+                                if(incident.getIncident()==ELEMENTINTERNARYCLASSIFICATION)
+                                    incidentType = 2;
+                                else
+                                    incidentType = 1;
+                            }
                             else
                                 incidentType = incident.getIncident();
                             incidentSet++;
@@ -971,6 +993,16 @@ public class Utils {
         int csvRecords = 0, maxFile=0;
         boolean dsFile = false;
         
+        logger.info("Type 0 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==0).count());
+        logger.info("Type 1 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==1).count());
+        logger.info("Type 2 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==2).count());
+        logger.info("Type 3 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==3).count());
+        logger.info("Type 4 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==4).count());
+        logger.info("Type 5 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==5).count());
+        logger.info("Type 6 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==6).count());
+        logger.info("Type 7 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==7).count());
+        logger.info("Type 8 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==8).count());
+        
         // To ensure any file is overwrited
         File f = new File(path);
         String[] files = f.list();
@@ -986,8 +1018,9 @@ public class Utils {
                     else
                     {
                         s1 = s[1].split(".csv");
-                        if(Integer.valueOf(s1[0]) > maxFile)
-                            maxFile = Integer.valueOf(s1[0]);            
+                        if (s1[0].matches("^[0-9]*$"))
+                            if(Integer.valueOf(s1[0]) > maxFile)
+                                maxFile = Integer.valueOf(s1[0]);            
                     }
                 } 
             }
