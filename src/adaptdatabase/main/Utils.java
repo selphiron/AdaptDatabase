@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package adaptdatabase.main;
 
 import adaptdatabase.entities.*;
@@ -39,13 +34,10 @@ public class Utils {
     private final int     MINNUMBEROFREADINGS;
     private final int     WINDOWFRAME;
     private final int     WINDOWSPLIT;
-    private final int     TRAININGDATASET;
-    private final int     USEDDATASET;
     private final int[]   DISCARTEDINCIDENTS;
     private final boolean BINARYCLASSIFICATION;
     private final boolean TERNARYCLASSIFICATION;
     private final int     ELEMENTINTERNARYCLASSIFICATION;
-    
     
     DoubleFFT_1D fft;
     double[] xFFT;
@@ -57,9 +49,8 @@ public class Utils {
 
     
     public Utils(String INPUTDATASETPATH, String OUTPUTDATASETPATH, boolean EXTRACTION, boolean USERTAG,
-                 int MINNUMBEROFREADINGS, int WINDOWFRAME, int WINDOWSHIFT, int TRAININGDATASET,
-                 int USEDDATASET, int[] DISCARTEDINCIDENTS, boolean BINARYCLASSIFICATION,
-                 boolean TERNARYCLASSIFICATION, int ELEMENTINTERNARYCLASSIFICATION)
+                 int MINNUMBEROFREADINGS, int WINDOWFRAME, int WINDOWSHIFT, int[] DISCARTEDINCIDENTS, 
+                 boolean BINARYCLASSIFICATION, boolean TERNARYCLASSIFICATION, int ELEMENTINTERNARYCLASSIFICATION)
     {
         this.INPUTDATASETPATH = INPUTDATASETPATH;
         this.OUTPUTDATASETPATH = OUTPUTDATASETPATH;
@@ -68,8 +59,6 @@ public class Utils {
         this.MINNUMBEROFREADINGS = MINNUMBEROFREADINGS;
         this.WINDOWFRAME = WINDOWFRAME;
         this.WINDOWSPLIT = WINDOWSHIFT;
-        this.TRAININGDATASET = TRAININGDATASET;
-        this.USEDDATASET = USEDDATASET;
         this.DISCARTEDINCIDENTS = DISCARTEDINCIDENTS;
         this.BINARYCLASSIFICATION = BINARYCLASSIFICATION;
         this.TERNARYCLASSIFICATION = TERNARYCLASSIFICATION;
@@ -140,6 +129,8 @@ public class Utils {
         BufferedReader br = new BufferedReader(reader);
         String line;
         
+        long ts = 0l;
+        
         String[] s = file.split("/");
         String fileName = s[s.length-1];
 
@@ -154,7 +145,16 @@ public class Utils {
             incident.setKey(Integer.parseInt(incidentFields[0]));
             incident.setLatitude(Double.parseDouble(incidentFields[1]));
             incident.setLongitude(Double.parseDouble(incidentFields[2]));
-            incident.setTimestamp(Long.parseLong(incidentFields[3]));
+            
+            if (Long.parseLong(incidentFields[3]) == 1337 && USERTAG)
+            {
+                ts = takeTSforUserTagIncidents(incidentFields, file);
+                incident.setTimestamp(ts);
+            }
+            else
+                incident.setTimestamp(Long.parseLong(incidentFields[3]));
+            
+            
             incident.setBike(Integer.parseInt(incidentFields[4]));
             if(incidentFields[5].equals("1"))
                 incident.setChildCheckBox(true);
@@ -323,19 +323,6 @@ public class Utils {
                     prevGyr_b  = Float.parseFloat(incidentFields[8]);
                     prevGyr_c  = Float.parseFloat(incidentFields[9]); 
 
-                    // Add the first line values
-                    tmp_latitude.add(prevLat);
-                    tmp_longitude.add(prevLon);
-                    tmp_acc_x.add(Float.parseFloat(incidentFields[2]));
-                    tmp_acc_y.add(Float.parseFloat(incidentFields[3]));
-                    tmp_acc_z.add(Float.parseFloat(incidentFields[4]));
-                    tmp_timestamp.add(Long.parseLong(incidentFields[5]));
-                    tmp_acc_68.add(prevAcc_68);
-                    tmp_gyr_a.add(prevGyr_a);
-                    tmp_gyr_b.add(prevGyr_b);
-                    tmp_gyr_c.add(prevGyr_c);
-                    line = br.readLine();
-                    
                     // Read all the file
                     while (line != null)
                     {
@@ -363,19 +350,19 @@ public class Utils {
                                 gyr_a.addAll(tmp_gyr_a);
                                 gyr_b.addAll(tmp_gyr_b);
                                 gyr_c.addAll(tmp_gyr_c);
+                                tmp_latitude.clear();
+                                tmp_longitude.clear();
+                                tmp_acc_x.clear();
+                                tmp_acc_y.clear();
+                                tmp_acc_z.clear();
+                                tmp_timestamp.clear();
+                                tmp_acc_68.clear();
+                                tmp_gyr_a.clear();
+                                tmp_gyr_b.clear();
+                                tmp_gyr_c.clear();
                             }
-                            tmp_latitude.clear();
-                            tmp_longitude.clear();
-                            tmp_acc_x.clear();
-                            tmp_acc_y.clear();
-                            tmp_acc_z.clear();
-                            tmp_timestamp.clear();
-                            tmp_acc_68.clear();
-                            tmp_gyr_a.clear();
-                            tmp_gyr_b.clear();
-                            tmp_gyr_c.clear();
-                            
                             readings = 1;
+
                         }
 
                         if (incidentFields[0].equals(""))
@@ -503,10 +490,9 @@ public class Utils {
         WindowedRide ride;
         int i=0;
         long[] timestamps;
-        long timeslot = 0l, offset = 0l;
+        long timeslot = 0l;
         List<Integer> initIndexes, endIndexes;
-        Long t1 = 0l, dt = 0l, iTs = 0l;
-        boolean nextStartSet;
+        Long dt = 0l, iTs = 0l;
         int bikeType = 0, phoneLocation = 0, incidentType = 0;
         int numberOfWindowedRides = 0;
         int incidentSet = 0;
@@ -514,49 +500,47 @@ public class Utils {
         for (Ride r : rides)
         {
             System.out.println(r.getDs_name());
-            nextStartSet = false;
             initIndexes = new ArrayList<>();
             endIndexes = new ArrayList<>();
             
             // Phone Location and Bike Type should not change between incidents
             bikeType = r.getIncidents().get(0).getBike();
             phoneLocation = r.getIncidents().get(0).getpLoc();
+            
+            i=0;
+            
             // We check that the ride is longer than the actual Windowframe span
             if(r.getTimestamp().get(r.getTimestamp().size()-1) - r.getTimestamp().get(0) >= WINDOWFRAME)
             {
                 timestamps = r.getTimestamp().stream().mapToLong(x->x).toArray();
-                t1 = timestamps[0];
-                initIndexes.add(0);
+                initIndexes.add(i);
 
                 for (int j=1; j < timestamps.length; j++)
                 {
-                    dt = timestamps[j] - t1;
-                    if (dt >= WINDOWFRAME/WINDOWSPLIT && !nextStartSet && j != timestamps.length - 1)
-                    {
-                        initIndexes.add(j);
-                        i = j;
-                        nextStartSet = true;
-                    }
+                    dt = timestamps[j] - timestamps[i];
                     if (dt >= WINDOWFRAME)
                     {
                         endIndexes.add(j);
-                        t1 = timestamps[i];
-                        if (timestamps[timestamps.length -1] - t1 > WINDOWFRAME)
-                            j = i;
-                        else
-                            j = timestamps.length - 1;
-                        nextStartSet = false;
-                    }
-                    if (j == timestamps.length - 1)
-                        endIndexes.add(j);
-                }
-                int d = endIndexes.size()-initIndexes.size(); 
-                if ( d>0 && !endIndexes.contains(timestamps.length-1))
-                    endIndexes.add(timestamps.length-1);
-                else 
-                    for (int rm=1; rm<=d; rm++)
-                        initIndexes.remove(initIndexes.size()-1);
+                        j=i;
+                        while((timestamps[j]-timestamps[i])< WINDOWFRAME/WINDOWSPLIT)
+                        {
+                            j++;
+                            //System.out.println("while");
+                            //System.out.println("j: " + j + " | i:" + i);
+                            //System.out.println((timestamps[j]-timestamps[i]));
+                            if (j==timestamps.length-1)
+                                break;
+                        }   
 
+                        j--;
+                        i=j;
+                        initIndexes.add(i);
+                    }
+                    else if (j==timestamps.length-1)
+                        endIndexes.add(j);
+                    //System.out.println(j);
+
+                }
                 int ii = 0, ei = 0;
                 for (int k=0; k < initIndexes.size(); k++)
                 {
@@ -565,18 +549,20 @@ public class Utils {
 
                     ride = new WindowedRide();
 
-
                     // Look if between the middle interval there is an incident
                     for (Incident incident : r.getIncidents())
                     {
                         iTs = incident.getTimestamp();
 
                         timeslot = (long)Math.ceil(timestamps[ei] - timestamps[ii])/WINDOWSPLIT;
-
+                        
                         if (timestamps[ii] + timeslot <= iTs && timestamps[ei] - timeslot >= iTs)
                         {
                             if(BINARYCLASSIFICATION)
+                            {
                                 incidentType = 1;
+                                System.out.println("Incident in window: " + (k+1));
+                            }
                             else if (TERNARYCLASSIFICATION)
                             {
                                 if(incident.getIncident()==ELEMENTINTERNARYCLASSIFICATION)
@@ -587,6 +573,7 @@ public class Utils {
                             else
                                 incidentType = incident.getIncident();
                             incidentSet++;
+                            break;
                         }
                         else
                             incidentType = 0;
@@ -613,7 +600,7 @@ public class Utils {
                 }
             }
         }
-        
+        System.out.println(windowedRides.stream().map(x->x).filter(x->x.getIncident()!=0).count());
         System.out.println("Incidents set: " + incidentSet);
         
         return windowedRides;
@@ -879,161 +866,14 @@ public class Utils {
         fft.complexForward(fftDataZ);
         
     }
-
-    public String writeXLSNNDataset(String path, List<NNDataset> nnDataset) throws IOException
-    {
-        Date date = new Date(System.currentTimeMillis());
-        String filename = path + String.valueOf(date.toInstant().toEpochMilli()) + ".xls";
-        int xlsRecords = 0;
-        
-        HSSFWorkbook wb = new HSSFWorkbook();
-        
-   
-        HSSFSheet s = wb.createSheet("NNDataset");
-
-        // Create heading
-        Row heading = s.createRow(0);
-        heading.createCell(0).setCellValue("speed");
-        heading.createCell(1).setCellValue("mean_acc_x");
-        heading.createCell(2).setCellValue("mean_acc_y");
-        heading.createCell(3).setCellValue("mean_acc_z");
-        heading.createCell(4).setCellValue("std_acc_x");
-        heading.createCell(5).setCellValue("std_acc_y");
-        heading.createCell(6).setCellValue("std_acc_z");
-        heading.createCell(7).setCellValue("sma");
-        heading.createCell(8).setCellValue("mean_svm");
-        heading.createCell(9).setCellValue("entropyX");
-        heading.createCell(10).setCellValue("entropyY");
-        heading.createCell(11).setCellValue("entropyZ");
-        heading.createCell(12).setCellValue("bike_type");
-        heading.createCell(13).setCellValue("phone_location");
-        heading.createCell(14).setCellValue("incident_type");
-
-        // Adding Data
-        int r = 0;
-        for (NNDataset line : nnDataset) 
-        {
-            r++;
-            Row row = s.createRow(r);
-            // speed
-            Cell cellSpeed = row.createCell(0);
-            cellSpeed.setCellValue(line.getSpeed());
-            // mean_acc_x
-            Cell cellMeanAccX = row.createCell(1);
-            cellMeanAccX.setCellValue(line.getMean_acc_x());
-            // mean_acc_y
-            Cell cellMeanAccY = row.createCell(2);
-            cellMeanAccY.setCellValue(line.getMean_acc_y());
-            // mean_acc_z
-            Cell cellMeanAccZ = row.createCell(3);
-            cellMeanAccZ.setCellValue(line.getMean_acc_z());
-            // std_acc_x
-            Cell cellStdAccX = row.createCell(4);
-            cellStdAccX.setCellValue(line.getStd_acc_x());                                        
-            // std_acc_y
-            Cell cellStdAccY = row.createCell(5);
-            cellStdAccY.setCellValue(line.getStd_acc_y());
-            // std_acc_z
-            Cell cellStdAccZ = row.createCell(6);
-            cellStdAccZ.setCellValue(line.getStd_acc_z());
-            // SMA
-            Cell cellSma = row.createCell(7);
-            cellSma.setCellValue(line.getSma());
-            // mean_svm
-            Cell cellMeanSvm = row.createCell(8);
-            cellMeanSvm.setCellValue(line.getMean_svm());
-            // EntropyX
-            Cell cellEntropyX = row.createCell(9);
-            cellEntropyX.setCellValue(line.getEntropyX());
-            // EntropyY
-            Cell cellEntropyY = row.createCell(10);
-            cellEntropyY.setCellValue(line.getEntropyY());
-            // EntropyZ
-            Cell cellEntropyZ = row.createCell(11);
-            cellEntropyZ.setCellValue(line.getEntropyZ());
-            // bikeType
-            Cell cellBikeType = row.createCell(12);
-            cellBikeType.setCellValue(line.getBike_type());
-            // PhoneLocation
-            Cell cellPhoneLocation = row.createCell(13);
-            cellPhoneLocation.setCellValue(line.getPhone_location());
-            // incident_type
-            Cell cellIncidentType = row.createCell(14);
-            cellIncidentType.setCellValue(line.getIncident_type());
-                        
-            if(r%1000==0) System.out.println(r + " xls records added");
-
-        }
-
-        //Filter
-        s.setAutoFilter(new CellRangeAddress(0, 0, 0, 14));
-        s.createFreezePane(0, 1);
-
-        //Autofit
-        for(int k=0; k<=14; k++)
-            s.autoSizeColumn(k);        
-        
-        
-        // Save file
-        FileOutputStream out = new FileOutputStream(filename);
-        wb.write(out);
-        out.close();
-        wb.close();
-        
-        return filename;
-
-    }
     
     public String writeCSVFile(String path, List<NNDataset> nnDataset) throws IOException
     {
-        Date date = new Date(System.currentTimeMillis());
-        String filename = path + "dataset.csv";
+        String filename;
         String line = "";
-        String[] s, s1;
-        int csvRecords = 0, maxFile=0;
-        boolean dsFile = false;
+        int csvRecords = 0;
         
-        logger.info("Type 0 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==0).count());
-        logger.info("Type 1 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==1).count());
-        logger.info("Type 2 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==2).count());
-        logger.info("Type 3 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==3).count());
-        logger.info("Type 4 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==4).count());
-        logger.info("Type 5 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==5).count());
-        logger.info("Type 6 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==6).count());
-        logger.info("Type 7 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==7).count());
-        logger.info("Type 8 incidents: " + nnDataset.stream().filter(x -> x.getIncident_type()==8).count());
-        
-        // To ensure any file is overwrited
-        File f = new File(path);
-        String[] files = f.list();
-        for(int i=0; i < files.length; i++)
-        {
-            if(new File(path + files[i]).isFile())
-            {
-                s = files[i].split("dataset"); 
-                if(s.length==2)
-                {
-                    if(s[1].equals(".csv"))
-                        dsFile = true;
-                    else
-                    {
-                        s1 = s[1].split(".csv");
-                        if (s1[0].matches("^[0-9]*$"))
-                            if(Integer.valueOf(s1[0]) > maxFile)
-                                maxFile = Integer.valueOf(s1[0]);            
-                    }
-                } 
-            }
-        }
-        
-        maxFile++;
-        
-        if (dsFile)
-            new File(filename).renameTo(new File(path+"dataset" + maxFile + ".csv"));
-
-        
-        nnDataset = nnDataset.subList(0, Math.round(nnDataset.size()*USEDDATASET/100));
-        int trainingSamples = Math.round(nnDataset.size()*TRAININGDATASET/100);
+        filename = obtainFilename(path, "tmp");
                 
         FileWriter writer = new FileWriter(filename);
         
@@ -1056,11 +896,8 @@ public class Utils {
             line += l.getEntropyZ() + ",";
             line += l.getBike_type()  + ",";
             line += l.getPhone_location() + ",";
-            if (csvRecords < trainingSamples)
-                line += l.getIncident_type() + "\n";
-            else
-                line += "0\n";
-
+            line += l.getIncident_type() + "\n";
+            
             writer.append(line);
             
             csvRecords++;
@@ -1097,7 +934,7 @@ public class Utils {
                 max=countType[i];
         }
                     
-        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==0).limit(2*max).collect(Collectors.toList()));
+        outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==0).limit(max).collect(Collectors.toList()));
         outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==1).collect(Collectors.toList()));
         outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==2).collect(Collectors.toList()));
         outDataset.addAll(nndataset.stream().filter(x->x.getIncident_type()==3).collect(Collectors.toList()));
@@ -1119,4 +956,171 @@ public class Utils {
         
     }
     
+    public long takeTSforUserTagIncidents(String[] incidentFields, String file) throws IOException
+    {
+        long ts = 1337l;
+        double lat = Double.parseDouble(incidentFields[1]);
+        double lon = Double.parseDouble(incidentFields[2]);
+        boolean fileWithWrongFormat = false;
+        boolean coorFound = false;
+        
+        FileReader r = new FileReader(file);
+        BufferedReader br = new BufferedReader(r);
+            
+        // Read until header of the ride data
+        String line = br.readLine();
+        while(!line.equals("lat,lon,X,Y,Z,timeStamp,acc,a,b,c"))
+        {
+            line = br.readLine();
+            if(line.equals("lat,lon,X,Y,Z,timeStamp")) 
+            {
+                fileWithWrongFormat = true;
+                break;
+            }
+        }
+
+        if (!fileWithWrongFormat) 
+        {
+            line = br.readLine();
+            if (line != null)
+            {
+                String[] fileFields;
+
+                // Read all the file
+                while (line != null && !coorFound)
+                {
+                    fileFields = line.split(",",-1);
+                    if (!fileFields[0].equals(""))
+                    {
+                        if (Double.parseDouble(fileFields[0]) == lat &&
+                            Double.parseDouble(fileFields[1]) == lon)
+                        {
+                            ts = Long.parseLong(fileFields[5]);
+                            coorFound = true;
+                        }
+                    }
+                    line = br.readLine();
+                }
+            }
+            else System.out.println("Filename: " + file + " is empty");
+        }
+        br.close();
+        r.close();
+        
+        return ts;
+    }
+    
+    public String obtainFilename(String path, String name)
+    {
+        String[] s, s1;
+        String filename = "";
+        boolean dsFile = false;
+        int maxFile = 0;
+        
+        // To ensure any file is overwrited
+        File f = new File(path);
+        String[] files = f.list();
+        for(int i=0; i < files.length; i++)
+        {
+            if(new File(path + files[i]).isFile())
+            {
+                s = files[i].split(name); 
+                if(s.length==2)
+                {
+                    if(s[1].equals(".csv"))
+                        dsFile = true;
+                    else
+                    {
+                        s1 = s[1].split(".csv");
+                        if (s1[0].matches("^[0-9]*$"))
+                            if(Integer.valueOf(s1[0]) > maxFile)
+                                maxFile = Integer.valueOf(s1[0]);     
+                    }
+                } 
+            }
+        }
+        
+        maxFile++;
+        
+        filename = path + name + maxFile + ".csv";
+        
+        return filename;
+    }
+    
+    public String mergeFiles(String path, String[] files) throws IOException
+    {
+                
+        if (files.length == 0)
+            return "";
+        else
+        {            
+            String filename = obtainFilename(path, "dataset");
+            String line = "";
+            FileWriter writer = new FileWriter(filename);
+            BufferedReader br;
+            File f;
+            
+            for(int i=0; i<files.length; i++)
+            {
+                br = new BufferedReader(new FileReader(files[i]));
+                line = br.readLine();
+                while(line != null)
+                {
+                    writer.append(line + "\n");
+                    line = br.readLine();
+                }
+                br.close();
+                f = new File(files[i]);
+                f.delete();
+            }
+            writer.flush();
+            writer.close();
+            
+            
+            return filename;
+        }
+    }
+    
+    public String[] splitDataset(String file, int trainPercentage) throws IOException
+    {
+        String[] filenames = {file.replace(".csv", "_train.csv"),file.replace(".csv", "_test.csv")};
+        String line = "";
+        int lines = 0;
+        int lineNumber = 0, trainLines = 0;
+        
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        line = br.readLine();
+        while(line!=null)
+        {
+            lines++;
+            line = br.readLine();
+        }
+        br.close();
+        
+        trainLines = lines*trainPercentage/100;
+        
+        FileWriter writerTrain = new FileWriter(filenames[0]);
+        FileWriter writerTest = new FileWriter(filenames[1]);
+        
+        br = new BufferedReader(new FileReader(file));
+        line = br.readLine();
+                
+        while(line!=null)
+        {
+            if(lineNumber<trainLines) writerTrain.append(line + "\n");
+            else writerTest.append(line + "\n");
+            
+            line = br.readLine();
+            lineNumber++;
+        }
+        br.close();
+        writerTrain.flush();
+        writerTrain.close();
+        writerTest.flush();
+        writerTest.close();
+        
+        
+        return filenames;
+
+    }
 }
