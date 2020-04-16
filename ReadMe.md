@@ -2,6 +2,9 @@
 
 This application will generate a new dataset to train the Neural Network in https://github.com/albertsanchezf/SimraNN from a dataset that uses SimRa's project dataset format (https://github.com/simra-project/dataset)
 
+**Before execution**
+  Depending of the dataset used, a pre processing of the dataset must be done in order to discard rides that have anomalies such as big time spans between samples (i.e. more that X seconds between two consecutives ride samples). There is a program called ReviewDataset (https://github.com/albertsanchezf/ReviewDataset) that will do this preprocessing procedure. It is recommended to preprocess the dataset with a maxMS value of 1000 (or less).
+
 In order to run it:
 - You must change:
   - The value of String[] variable 'datasetpaths' located in AdaptDatabase class, to point to your dataset folders.
@@ -15,3 +18,5 @@ In order to run it:
   - The value of boolean variable 'USERTAG' located in AdaptDatabase class, if you want to include the user tagged incidents
   - The value of integer variable 'MINNUMBEROFREADINGS' located in AdaptDatabase class, to omit data if the number of readings between 3 seconds doesn't reach X samples.
   - The value of integer variable 'WINDOWFRAME" located in AdaptDatabase class, to define the window length in miliseconds
+  
+  
